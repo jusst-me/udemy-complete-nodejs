@@ -15,10 +15,9 @@ export interface PostRouteParams extends Record<string, string> {
   postId: string;
 }
 
-// Body for POST /posts/:postId/comments
+// Body for POST /posts/:postId/comments (userId from authenticated user)
 export interface CreateCommentBody {
   content: string;
-  userName?: string;
 }
 
 // Params for routes under /posts/:postId/comments
