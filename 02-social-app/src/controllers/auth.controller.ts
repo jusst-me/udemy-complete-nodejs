@@ -4,6 +4,7 @@ import type { LoginBody, SignupBody } from "../types/requests";
 import { AppError } from "../errors/AppError";
 import User from "../models/user.model";
 import { requireAuthCredentials } from "../utils/authHelpers";
+import jwt from "jsonwebtoken";
 
 const INVALID_CREDENTIALS_MESSAGE = "Invalid email or password";
 
@@ -25,7 +26,11 @@ export const signup = async (
   const hashedPassword = await bcrypt.hash(password, 10);
   const newUser = await User.create({ email, password: hashedPassword });
 
-  console.log(newUser);
+  // Sign a JWT with the user's ID and the cookie secret
+  const userJwt = jwt.sign({ id: newUser._id }, process.env.COOKIE_SECRET!, {
+    expiresIn: "1h",
+  });
+  req.session = { jwt: userJwt };
 
   res.status(201).json(newUser);
 };
@@ -50,13 +55,22 @@ export const login = async (
     return next(new AppError(INVALID_CREDENTIALS_MESSAGE, 401));
   }
 
-  res.status(200).json({ message: "Login successful" });
+  // Sign a JWT with the user's ID and the cookie secret
+  const userJwt = jwt.sign({ id: user._id }, process.env.COOKIE_SECRET!, {
+    expiresIn: "1h",
+  });
+  req.session = { jwt: userJwt };
+
+  res.status(200).json(user);
 };
 
 export const logout = async (
-  _req: Request,
+  req: Request,
   res: Response,
   _next: NextFunction,
 ) => {
+  // Clear the JWT from the session
+  req.session = { jwt: null };
+
   res.status(200).json({ message: "Logout successful" });
 };
