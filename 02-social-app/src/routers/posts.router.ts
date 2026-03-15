@@ -1,22 +1,26 @@
 import { Router } from "express";
 import * as postsController from "../controllers/posts.controller";
 import { asyncHandler } from "../utils/asyncHandler";
+import commentsRouter from "./comments.router";
 
 const router = Router();
 
 // GET /posts - Get all posts
 router.get("/", asyncHandler(postsController.getAllPosts));
 
-// GET /posts/:id - Get a post by id
-router.get("/:id", asyncHandler(postsController.getPostById));
-
 // POST /posts - Create a new post
 router.post("/", asyncHandler(postsController.createPost));
 
-// PUT /posts/:id - Update a post
-router.put("/:id", asyncHandler(postsController.updatePost));
+// Comment routes (must be before /:postId so path is unambiguous)
+router.use("/:postId/comments", commentsRouter);
 
-// DELETE /posts/:id - Delete a post
-router.delete("/:id", asyncHandler(postsController.deletePost));
+// GET /posts/:postId - Get a post by id
+router.get("/:postId", asyncHandler(postsController.getPostById));
+
+// PUT /posts/:postId - Update a post
+router.put("/:postId", asyncHandler(postsController.updatePost));
+
+// DELETE /posts/:postId - Delete a post
+router.delete("/:postId", asyncHandler(postsController.deletePost));
 
 export default router;
