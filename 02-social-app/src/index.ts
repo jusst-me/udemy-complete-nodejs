@@ -3,6 +3,7 @@ import express from "express";
 import mongoose from "mongoose";
 import { errorHandler } from "./middleware/errorHandler";
 import indexRouter from "./routers/index.router";
+import cors from "cors";
 
 dotenv.config();
 
@@ -12,9 +13,17 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// CORS middleware
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN || "http://localhost:3000",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  }),
+);
+
 // Routes (registered before listen so they are always available)
-const basePath = `/${process.env.API_PREFIX || "api"}`;
-app.use(basePath, indexRouter);
+app.use(indexRouter);
 
 // Error handler middleware must be last
 app.use(errorHandler);
