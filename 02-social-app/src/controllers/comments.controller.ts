@@ -21,11 +21,14 @@ export const getComments = async (
   const post = await findPostOr404(postId, next);
   if (!post) return;
 
-  const comments = await Comment.find({ postId }).sort({ createdAt: 1 }).lean();
+  const comments = await Comment.find({ postId })
+    .sort({ createdAt: 1 })
+    .populate("userId", "email")
+    .lean();
   res.json(comments);
 };
 
-// POST /posts/:postId/comments - Create a comment on a post
+// POST /posts/:postId/comments - Create a comment (optional auth: if logged in set userId, else anonymous → show "Anonymous" in frontend)
 export const createComment = async (
   req: Request<CommentRouteParams, unknown, CreateCommentBody>,
   res: Response,
@@ -34,7 +37,7 @@ export const createComment = async (
   const postId = requireValidObjectId(req.params, "postId", "Post ID", next);
   if (postId === null) return;
 
-  const { content, userName } = req.body;
+  const { content } = req.body;
   if (!content?.trim()) {
     return next(new AppError("Content is required", 400));
   }
@@ -42,42 +45,24 @@ export const createComment = async (
   const post = await findPostOr404(postId, next);
   if (!post) return;
 
-  const hasUserName =
-    userName != null && userName !== "" && String(userName).trim() !== "";
-
   const comment = await Comment.create({
     postId,
     content: content.trim(),
-    ...(hasUserName && { userName }),
+    ...(req.user && { userId: req.user.id }),
   });
   res.status(201).json(comment);
 };
 
-// DELETE /posts/:postId/comments/:commentId - Delete a comment
+// DELETE /posts/:postId/comments/:commentId - Delete a comment (requires authenticate + requireCommentOwner; req.comment is set)
 export const deleteComment = async (
   req: Request<DeleteCommentParams>,
   res: Response,
   next: NextFunction,
 ) => {
-  const postId = requireValidObjectId(req.params, "postId", "Post ID", next);
-  if (postId === null) return;
-
-  const commentId = requireValidObjectId(
-    req.params,
-    "commentId",
-    "Comment ID",
-    next,
-  );
-  if (commentId === null) return;
-
-  const comment = await Comment.findOneAndDelete({
-    _id: commentId,
-    postId,
-  });
-
-  if (!comment) {
+  if (!req.comment) {
     return next(new AppError("Comment not found", 404));
   }
 
+  await Comment.findByIdAndDelete(req.comment._id);
   res.status(204).send();
 };
